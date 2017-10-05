@@ -2884,10 +2884,20 @@ class TextEditorComponent {
 
   // Ensure the spatial index is populated with rows that are currently visible
   populateVisibleRowRange (renderedStartRow) {
-    const editorHeightInTiles = this.getScrollContainerHeight() / this.getLineHeight()
-    const visibleTileCount = Math.ceil(editorHeightInTiles) + 1
-    const lastRenderedRow = renderedStartRow + (visibleTileCount * this.getRowsPerTile())
-    this.props.model.displayLayer.populateSpatialIndexIfNeeded(Infinity, lastRenderedRow)
+    const {model} = this.props
+    const previousScreenLineCount = model.getApproximateScreenLineCount()
+
+    const renderedEndRow = renderedStartRow + (this.getVisibleTileCount() * this.getRowsPerTile())
+    this.props.model.displayLayer.populateSpatialIndexIfNeeded(Infinity, renderedEndRow)
+
+    // If the approximate screen line count changes after populating the spatial
+    // index, we need to clear the derived dimensions cache because all the
+    // stored values may refer to positions that don't exist. This could happen
+    // when the approximation exceeds the actual number of screen lines and we
+    // attempt to scroll to a non-existent position.
+    if (model.getApproximateScreenLineCount() !== previousScreenLineCount) {
+      this.derivedDimensionsCache = {}
+    }
   }
 
   populateVisibleTiles () {
